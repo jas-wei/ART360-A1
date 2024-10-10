@@ -1,36 +1,54 @@
-/* bloob.css */
-body, html {
+.hero-container {
+    min-height: 100vh;
+    text-align: center;
+    color: white;
+  
+    font-size: 5vmin;
+  
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    margin: 0;
-    background-color: #282c34;
-}
-
-.container {
     position: relative;
-}
-
-.blob {
-    fill: url(#grad1);
-}
-
-.animated-blob {
-    animation: blobMorph 8s ease-in-out infinite;
-}
-
-@keyframes blobMorph {
-    0%, 100% {
-        d: path("M446,300Q420,350,380,386Q340,421,283,421Q227,421,185,383Q143,346,108,308Q73,270,71,213Q69,157,109,117Q149,78,198,58Q248,38,294,69Q340,100,392,128Q444,157,454,214Q463,270,446,300Z");
-        filter: blur(5px);
-    }
-    33% {
-        d: path("M449,300Q441,350,389,376Q338,401,281,425Q224,449,187,403Q151,358,127,311Q104,263,95,214Q86,165,117,122Q148,79,191,57Q233,34,292,39Q351,44,386,92Q421,140,437,195Q453,250,449,300Z");
-        filter: blur(10px);
-    }
-    66% {
-        d: path("M451,302Q424,354,387,389Q349,424,289,432Q228,439,179,409Q129,378,95,336Q61,294,66,233Q70,172,106,130Q142,87,188,68Q233,49,289,65Q346,81,384,116Q422,151,453,201Q483,250,451,302Z");
-        filter: blur(15px);
-    }
-}
+    overflow: hidden;
+  }
+  
+  .hero {
+    width: 100%;
+    height: 100%;
+    background: red;
+    background: -webkit-linear-gradient(left top, #152a8e, #b1376c);
+    background: -o-linear-gradient(bottom right, #152a8e, #b1376c);
+    background: -moz-linear-gradient(bottom right, #152a8e, #b1376c);
+    background: linear-gradient(to bottom right, #152a8e, #b1376c);
+  
+    z-index: -1;
+  
+    position: absolute;
+  }
+  
+  .hero:before {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0px;
+    opacity: 0.05;
+    z-index: 0;
+  }
+  
+  #loader {
+    display: inline-block;
+    width: 100vw;
+    height: 100vh;
+    top: 50%;
+    left: 50%;
+  }
+  
+  .blobs {
+    -webkit-filter: url("#goo");
+    filter: url("#goo");
+  }
+  
+  .blob {
+    fill: white;
+  }

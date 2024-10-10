@@ -1,23 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="bloob.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SVG Blob Animation</title>
+    <title>Blurred Animated Blobs</title>
+    <style>
+        .container {
+            min-height: 100vh;
+            text-align: center;
+            color: white;
+            font-size: 5vmin;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .background {
+            width: 100%;
+            height: 100%;
+            background: rgb(15, 1, 1);
+            z-index: -1;
+            position: absolute;
+        }
+
+        .background:before {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0px;
+            opacity: 0.05;
+            z-index: 0;
+        }
+
+        #svg-container {
+            display: inline-block;
+            width: 100vw;
+            height: 100vh;
+            top: 50%;
+            left: 50%;
+        }
+
+        .blob-group {
+            -webkit-filter: url("#gooey-filter");
+            filter: url("#gooey-filter");
+        }
+
+        .animated-blob {
+            fill: white;
+        }
+
+        /* image inversion */
+        /* Define a CSS class that inverts the image */
+        .inverted {
+            filter: invert(1); /* Apply CSS invert filter */
+        }
+    </style>
 </head>
 <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
+
     <div class="container">
-        <svg width="800" height="600" viewBox="0 0 600 600">
-            <defs>
-                <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" style="stop-color: #2dd56d; stop-opacity: 0.1" />
-                    <stop offset="100%" style="stop-color: #FFD93D; stop-opacity: 0.1" />
-                </linearGradient>
-            </defs>
-            <path class="blob animated-blob" d="M446,300Q420,350,380,386Q340,421,283,421Q227,421,185,383Q143,346,108,308Q73,270,71,213Q69,157,109,117Q149,78,198,58Q248,38,294,69Q340,100,392,128Q444,157,454,214Q463,270,446,300Z"></path>
-        </svg>
+        <div class="background">
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="svg-container">
+                <defs>
+                    <!-- Updated Filter with More Blur -->
+                    <filter id="gooey-filter">
+                        <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="50" /> <!-- Increased stdDeviation to 50 for more blur -->
+                        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+                        <feBlend in2="goo" in="SourceGraphic" result="mix" />
+                    </filter>
+                    <linearGradient id="gradient">
+                        <stop offset="5%" stop-color="#40204c" />
+                        <stop offset="40%" stop-color="#a3225c" />
+                        <stop offset="100%" stop-color="#e24926" />
+                    </linearGradient>
+                </defs>
+                <mask id="mask">
+                    <g class="blob-group" id="blob-group">
+                    </g>
+                </mask>
+                <rect mask="url(#mask)" fill="url(#gradient)" width="100%" height="100%">
+            </svg>
+        </div>
+
+        <img id="image" src="./bloob_picture.jpg" alt="Sample Image" style="display: block; margin-bottom: 10px;">
+        <button id="invert-button">Invert Image</button>
+
+        <!-- Button to Get Color -->
+        <button id="get-color-button">Get Pixel Color</button>
+
+        <!-- Display Color -->
+        <div id="color-display" style="margin-top: 20px; font-weight: bold;"></div>
+
+        <!-- Hidden Canvas Element -->
+        <canvas id="canvas" style="display: none;"></canvas>
     </div>
+
+    <!-- <script>
+        // Select the image and button elements
+        const image = document.getElementById("image");
+        const button = document.getElementById("invert-button");
+
+        // Add click event listener to the button
+        button.addEventListener("click", () => {
+            // Toggle the 'inverted' class on the image
+            image.classList.toggle("inverted");
+        });
+    </script> -->
+
+    <script>
+        const image = document.getElementById("image");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const getColorButton = document.getElementById("get-color-button");
+        const colorDisplay = document.getElementById("color-display");
+
+        // Load the image onto the canvas when it's fully loaded
+        image.onload = () => {
+            // Set canvas dimensions to match the image
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            // Draw the image onto the canvas
+            ctx.drawImage(image, 0, 0, image.width, image.height);
+        };
+
+        // Function to extract the color of a specific pixel
+        function getPixelColor(x, y) {
+            // Get the pixel data for the specified (x, y) position
+            const pixel = ctx.getImageData(x, y, 1, 1).data; // Only 1x1 area
+            const [r, g, b, a] = pixel;
+
+            // // Convert to an RGBA string
+            return `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+        };
+
+        // // Event listener for the button click
+        // getColorButton.addEventListener("click", () => {
+
+        //     const color = getPixelColor(x, y);
+
+        //     // Display the extracted color
+        //     // colorDisplay.textContent = `Pixel Color: ${color}`;
+        //     // colorDisplay.style.color = color; // Update text color to match the pixel color
+        // });
+
+        // Set viewport width and height variables
+        const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth),
+              viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
+
+        // SVG namespace
+        let svgNamespace = "http://www.w3.org/2000/svg",
+            blobContainer = document.getElementById("blob-group");
+
+        // Create 11 random blobs and animate them
+        for (let count = 1; count <= 11; count++) {
+            let x = Math.floor(Math.random() * viewportWidth),
+                y = Math.floor(Math.random() * viewportHeight),
+                size = Math.floor(Math.random() * 10) * 10 + 50;
+
+                const color = getPixelColor(x, y);
+
+            // Create a new circle element with random attributes
+            var circle = document.createElementNS(svgNamespace, "circle");
+            circle.setAttributeNS(null, "class", "animated-blob");
+            circle.setAttributeNS(null, "id", `blob-${count}`);
+            circle.setAttributeNS(null, "cx", x);
+            circle.setAttributeNS(null, "cy", y);
+            circle.setAttributeNS(null, "r", size);
+            blobContainer.appendChild(circle);
+
+            // Animate the blob using GSAP with random movements
+            gsap.to(`#blob-${count}`, {
+                x: `random(${0 - x}, ${viewportWidth - x})`,
+                y: `random(${0 - y}, ${viewportHeight - y})`,
+                duration: `random(5, 50)`,
+                repeat: -1,
+                repeatRefresh: true
+            });
+        };
+    </script>
 </body>
 </html>
-

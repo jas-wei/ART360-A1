@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Pixel Color</title>
+</head>
+<body>
+    <!-- Image Element -->
+    <img id="image" src="./bloob_picture.jpg" alt="Sample Image" style="max-width: 300px; display: block; margin-bottom: 10px;">
+
+    <!-- Input Fields for x and y coordinates -->
+    <label for="x-coordinate">X Coordinate: </label>
+    <input type="number" id="x-coordinate" value="50">
+    <label for="y-coordinate">Y Coordinate: </label>
+    <input type="number" id="y-coordinate" value="50">
+
+    <!-- Button to Get Color -->
+    <button id="get-color-button">Get Pixel Color</button>
+
+    <!-- Display Color -->
+    <div id="color-display" style="margin-top: 20px; font-weight: bold;"></div>
+
+    <!-- Hidden Canvas Element -->
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script>
+        // Get references to HTML elements
+        const image = document.getElementById("image");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const getColorButton = document.getElementById("get-color-button");
+        const colorDisplay = document.getElementById("color-display");
+
+        // Load the image onto the canvas when it's fully loaded
+        image.onload = () => {
+            // Set canvas dimensions to match the image
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            // Draw the image onto the canvas
+            ctx.drawImage(image, 0, 0, image.width, image.height);
+        };
+
+        // Function to extract the color of a specific pixel
+        function getPixelColor(x, y) {
+            // Get the pixel data for the specified (x, y) position
+            const pixel = ctx.getImageData(x, y, 1, 1).data; // Only 1x1 area
+            const [r, g, b, a] = pixel;
+
+            // Convert to an RGBA string
+            return `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+        }
+
+        // Event listener for the button click
+        getColorButton.addEventListener("click", () => {
+            // Get x and y coordinates from user input
+            const x = parseInt(document.getElementById("x-coordinate").value);
+            const y = parseInt(document.getElementById("y-coordinate").value);
+
+            // Make sure the coordinates are within the canvas boundaries
+            if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
+                colorDisplay.textContent = "Coordinates are out of bounds!";
+                return;
+            }
+
+            // Get the color of the pixel at (x, y)
+            const color = getPixelColor(x, y);
+
+            // Display the extracted color
+            colorDisplay.textContent = `Pixel Color at (${x}, ${y}): ${color}`;
+            colorDisplay.style.color = color; // Update text color to match the pixel color
+        });
+    </script>
+</body>
+</html>
