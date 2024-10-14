@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Blobs with Synchronized Dynamic Opacity</title>
+    <style>
+        .container {
+            min-height: 100vh;
+            text-align: center;
+            color: white;
+            font-size: 5vmin;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .background {
+            width: 100%;
+            height: 100%;
+            background: rgb(15, 1, 1);
+            z-index: -1;
+            position: absolute;
+        }
+
+        #svg-container {
+            display: inline-block;
+            width: 100vw;
+            height: 100vh;
+            top: 50%;
+            left: 50%;
+            z-index: 1; /* Keep the SVG content below the static overlay */
+        }
+
+        .blob-group {
+            -webkit-filter: url("#gooey-filter");
+            filter: url("#gooey-filter");
+        }
+
+        .animated-blob {
+            fill: white;
+        }
+
+        .red-outline {
+            fill: none;
+            stroke: RGBA(0, 128, 128, 0.8); /* Outline color */
+            stroke-width: 10px; /* Outline thickness */
+            filter: url(#blur-outline); /* Apply blur filter to outline */
+        }
+
+        /* Global black overlay that will affect all blobs */
+        .global-black-overlay {
+            fill: black;
+            opacity: 0.9; /* Start with opacity 0, will animate this dynamically */
+        }
+
+        /* Hide the HTML image and canvas */
+        #image, #hidden-canvas {
+            display: none; /* Hides the original HTML image and canvas */
+        }
+
+        /* Canvas for TV static */
+        #static-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none; /* Prevent interaction with the static overlay */
+            z-index: 2; /* Put the static above everything */
+            opacity: 0.1; /* Control how intense the static looks */
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
+
+    <div class="container">
+        <div class="background">
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="svg-container">
+                <defs>
+                    <!-- Gooey Effect Filter -->
+                    <filter id="gooey-filter">
+                        <!-- Increased stdDeviation for more blurriness -->
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="constantBlur" /> <!-- Increased from 10 to 30 -->
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="70" result="mergeBlur" /> <!-- Increased from 50 to 70 -->
+                        <feColorMatrix in="mergeBlur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+                        <feBlend in="constantBlur" in2="goo" mode="normal" result="finalBlur" />
+                        <feBlend in2="finalBlur" in="SourceGraphic" result="mix" />
+                    </filter>
+
+                    <!-- Blurring filter for the outline -->
+                    <filter id="blur-outline">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="15" /> <!-- Adjust stdDeviation to control blur amount -->
+                    </filter>
+                </defs>
+                
+                <!-- Mask for the blobs -->
+                <mask id="mask">
+                    <g class="blob-group" id="blob-group"></g>
+                </mask>
+
+                <!-- Image with mask applied -->
+                <image id="svg-image" mask="url(#mask)" x="0" y="0" width="100%" height="100%"></image>
+
+                <!-- Red Outline Layer -->
+                <g id="red-outline-group"></g>
+
+                <!-- Single global black overlay -->
+                <rect class="global-black-overlay" x="0" y="0" width="100%" height="100%"></rect>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Hidden canvas for image processing -->
+    <canvas id="hidden-canvas"></canvas>
+    
+    <!-- Hidden image source -->
+    <img id="image" src="./bloob_picture.jpg" alt="Sample Image" style="display: none;">
+
+    <!-- TV static canvas -->
+    <canvas id="static-canvas"></canvas>
+
+    <script>
+        // Set up references to canvas and context
+        const hiddenCanvas = document.getElementById("hidden-canvas");
+        const ctx = hiddenCanvas.getContext("2d");
+
+        // Get reference to the HTML image and SVG image elements
+        const htmlImage = document.getElementById("image");
+        const svgImage = document.getElementById("svg-image");
+
+        // Load the image onto the canvas and apply it to the SVG background with filters
+        htmlImage.onload = function () {
+            // Set canvas size to match the HTML image dimensions
+            hiddenCanvas.width = htmlImage.width;
+            hiddenCanvas.height = htmlImage.height;
+
+            // Apply filters: invert and blur
+            ctx.filter = 'invert(1) blur(25px)'; // Invert colors and apply blur (25px)
+
+            // Draw the HTML image onto the canvas with filters applied
+            ctx.drawImage(htmlImage, 0, 0);
+
+            // Convert the canvas to a data URL and use it in the SVG <image> element
+            const imgDataUrl = hiddenCanvas.toDataURL();
+            svgImage.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imgDataUrl);
+
+            // Create blobs and animate them
+            createAndAnimateBlobs();
+        };
+
+        // Set viewport width and height variables
+        const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth),
+              viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
+
+        // SVG namespace and containers for blobs and overlays
+        const svgNamespace = "http://www.w3.org/2000/svg",
+              blobContainer = document.getElementById("blob-group"),
+              redOutlineContainer = document.getElementById("red-outline-group"),
+              blackOverlayRect = document.querySelector(".global-black-overlay");
+
+        // Create blobs and store references for color updates
+        let blobs = [];
+
+        // Function to create blobs and animate them
+        function createAndAnimateBlobs() {
+            for (let count = 1; count <= 11; count++) {
+                let x = Math.floor(Math.random() * viewportWidth),
+                    y = Math.floor(Math.random() * viewportHeight),
+                    size = Math.floor(Math.random() * 10) * 10 + 50;
+
+                // Create a new circle element with random attributes for the blob
+                const circle = document.createElementNS(svgNamespace, "circle");
+                circle.setAttributeNS(null, "class", "animated-blob");
+                circle.setAttributeNS(null, "cx", x);
+                circle.setAttributeNS(null, "cy", y);
+                circle.setAttributeNS(null, "r", size);
+                blobContainer.appendChild(circle);
+
+                // Create a new circle element for the red outline
+                const outlineCircle = document.createElementNS(svgNamespace, "circle");
+                outlineCircle.setAttributeNS(null, "class", "red-outline");
+                outlineCircle.setAttributeNS(null, "cx", x);
+                outlineCircle.setAttributeNS(null, "cy", y);
+                outlineCircle.setAttributeNS(null, "r", size + 10); // Slightly larger radius for the outline
+                redOutlineContainer.appendChild(outlineCircle);
+
+                // Store the blob and outline for future updates
+                blobs.push({ element: circle, outline: outlineCircle, x, y, size });
+
+                // Animate both the blob and its outline together
+                animateBlobAndOutline(circle, outlineCircle, x, y);
+            }
+
+            // Animate the opacity of the global black overlay
+            animateOverlayOpacity();
+        }
+
+        // Function to animate both blob and outline together
+        function animateBlobAndOutline(blob, outline, x, y) {
+            // Pre-calculate random destination and speed
+            const randomX = Math.random() * (viewportWidth - x) - x;
+            const randomY = Math.random() * (viewportHeight - y) - y;
+            const randomDuration = Math.random() * 70 + 30; // Generate random speed between 30 and 100
+
+            gsap.to([blob, outline], {
+                cx: randomX, // Use pre-calculated values
+                cy: randomY,
+                duration: randomDuration, // Use the same random duration for blob and outline
+                repeat: -1,
+                repeatRefresh: true
+            });
+        }
+
+        // Function to animate the global black overlay's opacity
+        function animateOverlayOpacity() {
+            gsap.to(blackOverlayRect, {
+                opacity: `random(0.7,1)`, // Random opacity between 0 and 0.7
+                duration: `random(2, 5)`, // Change opacity over a random duration
+                repeat: -1,
+                yoyo: true // Make the opacity oscillate between values
+            });
+        }
+
+        // Set up TV static effect on the overlay canvas
+        const staticCanvas = document.getElementById('static-canvas');
+        const staticCtx = staticCanvas.getContext('2d');
+
+        // Set canvas to cover the viewport
+        staticCanvas.width = window.innerWidth;
+        staticCanvas.height = window.innerHeight;
+
+        // Function to create the static noise
+        function generateStatic() {
+            const imageData = staticCtx.createImageData(staticCanvas.width, staticCanvas.height);
+            const buffer = new Uint32Array(imageData.data.buffer);
+            
+            for (let i = 0; i < buffer.length; i++) {
+                // Randomly set each pixel to black or white for the static effect
+                buffer[i] = Math.random() < 0.5 ? 0xFFFFFFFF : 0xFF000000;
+            }
+
+            staticCtx.putImageData(imageData, 0, 0);
+        }
+
+        // Continuously animate the static effect
+        function animateStatic() {
+            generateStatic();
+            requestAnimationFrame(animateStatic);
+        }
+
+        // Start the static animation
+        animateStatic();
+    </script>
+</body>
+</html>

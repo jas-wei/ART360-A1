@@ -20,7 +20,7 @@
         .background {
             width: 100%;
             height: 100%;
-            background: rgb(15, 1, 1);
+            background: rgb(20, 0, 0);
             z-index: -1;
             position: absolute;
         }
@@ -68,15 +68,26 @@
                 <defs>
                     <!-- Updated Filter with More Blur -->
                     <filter id="gooey-filter">
-                        <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="50" /> <!-- Increased stdDeviation to 50 for more blur -->
-                        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
-                        <feBlend in2="goo" in="SourceGraphic" result="mix" />
+                        <!-- Step 1: Apply a constant blur to every shape -->
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="constantBlur" /> <!-- Constant blur for all blobs -->
+                    
+                        <!-- Step 2: Apply the gooey effect -->
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="50" result="mergeBlur" /> <!-- Larger blur only for merging -->
+                        <feColorMatrix in="mergeBlur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+                    
+                        <!-- Step 3: Blend the constant blur and the gooey effect together -->
+                        <feBlend in="constantBlur" in2="goo" mode="normal" result="finalBlur" />
+                    
+                        <!-- Step 4: Output the final result -->
+                        <feBlend in2="finalBlur" in="SourceGraphic" result="mix" />
                     </filter>
+                    
                     <linearGradient id="gradient">
                         <stop offset="5%" stop-color="#40204c" />
-                        <stop offset="40%" stop-color="#a3225c" />
-                        <stop offset="100%" stop-color="#e24926" />
+                        <stop offset="40%" stop-color="#000000" />
+                        <stop offset="100%" stop-color="#ffffff" />
                     </linearGradient>
+
                 </defs>
                 <mask id="mask">
                     <g class="blob-group" id="blob-group">
@@ -86,14 +97,14 @@
             </svg>
         </div>
 
-        <img id="image" src="./bloob_picture.jpg" alt="Sample Image" style="display: block; margin-bottom: 10px;">
+        <img id="image" src="./bloob_picture.jpg" alt="Sample Image" style="display: none; margin-bottom: 10px;">
         <button id="invert-button">Invert Image</button>
 
         <!-- Button to Get Color -->
-        <button id="get-color-button">Get Pixel Color</button>
+        <!-- <button id="get-color-button">Get Pixel Color</button> -->
 
         <!-- Display Color -->
-        <div id="color-display" style="margin-top: 20px; font-weight: bold;"></div>
+        <!-- <div id="color-display" style="margin-top: 20px; font-weight: bold;"></div> -->
 
         <!-- Hidden Canvas Element -->
         <canvas id="canvas" style="display: none;"></canvas>
